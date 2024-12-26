@@ -6,7 +6,7 @@ exports.getAllUsers = async () => {
       const allUsersData = await db.collection('users').get();
       return allUsersData.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      throw new Error('Error al obtener los usuarios: ' + error.message);
+      throw new Error('Cant get users data: ' + error.message);
     }
 };
 
@@ -22,6 +22,24 @@ exports.createUser = async (userData) => {
 
       return { id: docRef.id, ...userData };
     } catch (error) {
-      throw new Error('Error al crear el usuario: ' + error.message);
+      throw new Error('Error: cant create user: ' + error.message);
     }
 };
+
+exports.loginUser = async (username, password) => {
+  const userDoc = await db.collection('users').where('username', '==', username).limit(1).get();
+
+  if(userDoc.empty) {
+    throw new Error('Error: incorrect username or password');
+  }
+
+  const user = userDoc.docs[0].data();
+
+  const verifyPassword = await bcrypt.compare(password, user.password);
+
+  if(!verifyPassword) {
+    throw new Error('Error: incorrect username or password');
+  }
+
+  return { id: userDoc.docs[0].id, username: user.username };
+}
