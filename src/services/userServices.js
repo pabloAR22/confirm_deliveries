@@ -4,7 +4,15 @@ const db = require('../config/firestore');
 exports.getAllUsers = async () => {
     try {
       const allUsersData = await db.collection('users').get();
-      return allUsersData.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      return allUsersData.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data
+        };
+      });
+
     } catch (error) {
       throw new Error('Cant get users data: ' + error.message);
     }

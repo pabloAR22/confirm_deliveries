@@ -1,9 +1,10 @@
 {
-  "name": "confirm_deliveries",
+  "name": "confirm-deliveries-api",
   "license": "MIT",
   "version": "1.0.0",
-  "main": "src/server.js",
+  "main": "src/app.js",
   "dependencies": {
+    "@google-cloud/functions-framework": "^3.1.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -13,8 +14,8 @@
     "jsonwebtoken": "^9.0.2"
   },
   "scripts": {
-    "dev": "nodemon  src/server.js",
-    "start": "node src/server.js",
+    "dev": "nodemon  src/app.js",
+    "start": "node src/app.js",
     "lint": "eslint"
   },
   "devDependencies": {
@@ -23,5 +24,8 @@
     "eslint-plugin-prettier": "^5.2.1",
     "nodemon": "^3.1.9",
     "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
