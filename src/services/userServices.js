@@ -12,6 +12,12 @@ exports.getAllUsers = async () => {
 
 exports.createUser = async (userData) => {
     try {
+      const usernameQuery = await db.collection('users').where('username', '==', userData.username).get();
+      
+      if (!usernameQuery.empty) {
+        throw new Error('Username already exists');
+      }
+
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(userData.password, salt);
 

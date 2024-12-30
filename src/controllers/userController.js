@@ -18,6 +18,12 @@ exports.addUser = async (req, res) => {
         const newUser = await userService.createUser(userData);
         res.status(201).json(newUser);
     } catch (error) {
+        if(error.message === 'Username already exists'){
+            return res.status(409).json({
+                success: false,
+                message: error.message
+            });
+        }
         res.status(500).json({ message: error.message });
     }
 };
