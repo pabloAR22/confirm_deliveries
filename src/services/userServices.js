@@ -4,7 +4,15 @@ const db = require('../config/firestore');
 exports.getAllUsers = async () => {
     try {
       const allUsersData = await db.collection('users').get();
-      return allUsersData.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      return allUsersData.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data
+        };
+      });
+
     } catch (error) {
       throw new Error('Cant get users data: ' + error.message);
     }
@@ -12,10 +20,10 @@ exports.getAllUsers = async () => {
 
 exports.createUser = async (userData) => {
     try {
-      const usernameQuery = await db.collection('users').where('username', '==', userData.username).get();
+      const usernameQuery = await db.collection('users') .where('username', '==', userData.username) .get();
       
       if (!usernameQuery.empty) {
-        throw new Error('Username already exists');
+        throw new Error('User already in use');
       }
 
       const salt = await bcrypt.genSalt();
@@ -28,7 +36,7 @@ exports.createUser = async (userData) => {
 
       return { id: docRef.id, ...userData };
     } catch (error) {
-      throw new Error('Error: cant create user: ' + error.message);
+      throw new Error('Cant create user: ' + error.message);
     }
 };
 
