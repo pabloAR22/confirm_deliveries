@@ -20,6 +20,12 @@ exports.getAllUsers = async () => {
 
 exports.createUser = async (userData) => {
     try {
+      const usernameQuery = await db.collection('users') .where('username', '==', userData.username) .get();
+      
+      if (!usernameQuery.empty) {
+        throw new Error('User already in use');
+      }
+
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(userData.password, salt);
 
@@ -30,7 +36,7 @@ exports.createUser = async (userData) => {
 
       return { id: docRef.id, ...userData };
     } catch (error) {
-      throw new Error('Error: cant create user: ' + error.message);
+      throw new Error('Cant create user: ' + error.message);
     }
 };
 

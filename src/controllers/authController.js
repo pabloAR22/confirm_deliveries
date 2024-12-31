@@ -14,6 +14,13 @@ exports.registerUser = async (req,res) => {
         });
 
     } catch (error) {
+        if (error.message === 'Cant create user: User already in use') {
+            return res.status(409).json({
+                success: false,
+                message: error.message
+            });
+        }
+
         res.status(500).json({
             status: "error",
             message: error.message
