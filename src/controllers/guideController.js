@@ -29,10 +29,15 @@ exports.confirmGuides = async (req, res) => {
             data: processedGuides
         });
     } catch (error) {
-        console.error("Error al crear las guías:", error);
-        
+        if(error.message === 'Cant create guide: Guide already confirmed') {
+            return res.status(409).json({
+                success: false,
+                message: error.message
+            });
+        }
+
         return res.status(500).json({
-            message: "Error al crear las guías",
+            message: "Error creating guides",
             error: error.message
         });
     }
