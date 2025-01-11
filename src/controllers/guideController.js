@@ -25,7 +25,7 @@ exports.confirmGuides = async (req, res) => {
         }
 
         return res.status(201).json({
-            message: "Guía(s) creada con exito",
+            message: "Guide(s) created successfully",
             data: processedGuides
         });
     } catch (error) {
