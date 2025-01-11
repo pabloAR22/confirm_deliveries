@@ -8,7 +8,7 @@ exports.registerUser = async (req,res) => {
 
         const newUser = await userService.createUser({ username, password });
 
-        res.status(200).json({
+        res.status(201).json({
             message: "User created!",
             user: newUser.username
         });
