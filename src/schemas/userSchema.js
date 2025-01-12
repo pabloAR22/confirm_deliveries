@@ -2,12 +2,12 @@ const Joi = require('joi');
 
 const userSchema = Joi.object({
     username: Joi.string().required().messages({
-        "string.empty": "El campo 'username' no puede estar vacío",
-        "any.required": "El campo 'username' es obligatorio",
+        "string.empty": "The field 'username' can't be empty",
+        "any.required": "The field 'username' it is mandatory",
     }),
     password: Joi.string().required().messages({
-        "string.empty": "El campo 'password' no puede estar vacío",
-        "any.required": "El campo 'password' es obligatorio",
+        "string.empty": "The field 'password' can't be empty",
+        "any.required": "The field 'password' it is mandatory",
     }),
 });
 
