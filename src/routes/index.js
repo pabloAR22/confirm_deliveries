@@ -8,13 +8,16 @@ const userSchema = require('../schemas/userSchema');
 const authRoutes = require('./authRoutes');
 const usersRoutes = require('./userRoutes');
 const guideRoutes = require('./guideRoutes');
+const swaggerRoutes = require('./swaggerRoutes');
 
 function routerApi(app) {
     const router = express.Router();
     app.use('/api/v1', router);
+    
     router.use('/auth', validateDataUsers(userSchema),authRoutes);
     router.use('/users', authMiddleware, usersRoutes);
     router.use('/guides', authMiddleware, guideRoutes);
+    router.use('/swagger', swaggerRoutes);
 }
 
 module.exports = routerApi;
