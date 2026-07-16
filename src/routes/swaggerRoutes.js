@@ -16,7 +16,7 @@ const swaggerOptions = {
         servers: [
             {
                 url: 'https://us-central1-confirm-deliveries.cloudfunctions.net/confirm-deliveries-api/api/v1',
-                description: 'Cloud fucntion de GCP'
+                description: 'Cloud function de GCP'
             },
         ],
         components: {
