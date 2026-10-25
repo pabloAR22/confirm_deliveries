@@ -130,3 +130,7 @@ dist
 .pnp.*
 
 key.json
+# AI / Supabase local
+.claude/settings.local.json
+supabase/.temp
+supabase/.branches
