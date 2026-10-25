@@ -13,7 +13,7 @@ Documentación detallada del estado actual (legacy): `docs/legacy-firestore-api.
 | | Hoy (legacy, `src/`) | Objetivo |
 |---|---|---|
 | Runtime | Express envuelto en GCP Cloud Function (`@google-cloud/functions-framework`) | Express standalone en contenedor Docker |
-| Datos | Firestore (`users`, `guides`) | Supabase PostgreSQL con tablas relacionales |
+| Datos | Firestore (`users`, `guides`) | Supabase PostgreSQL con tablas relacionales — **esquema listo (fase 1)** |
 | Auth | JWT propio + bcrypt (`/auth/register`, `/auth/login`) | Supabase Auth; la API solo verifica el token |
 | Frontend | — | React + TypeScript + Vite |
 | CI/CD | — | GitHub Actions: lint, tests, imagen Docker en GHCR, frontend en Vercel |
@@ -42,16 +42,20 @@ supabase/       generado por `supabase init`
 
 `src/`, `firebase.json`, `firestore.*`, `.firebaserc`, `.gcloudignore` y las dependencias de Firebase/GCP/bcrypt/jsonwebtoken se **eliminan** cuando su reemplazo funcione. No mantener ambos caminos en paralelo.
 
-## Modelo de datos objetivo (propuesta)
+## Modelo de datos (fase 1 ✅)
 
-Firestore guardaba guías planas sin estado ni historial. En Postgres:
+Fuente de verdad: `supabase/migrations/`. Resumen:
 
-- `profiles` — `id uuid` PK → `auth.users(id)`, `username text unique`, `created_at`. Reemplaza la colección `users` (sin password: Supabase Auth la gestiona).
-- `guides` — `id uuid` PK, `guia text unique` (5–10 chars), `ubicacion`, `ciudad_destino`, `departamento_destino`, `codigo_postal char(6)`, `telefono_contacto text` (10 dígitos), `valor_productos numeric(12,2) > 0`, `costo_envio numeric(12,2) > 0`, `id_proveedor text`, `numero_cuenta text`, `observaciones` (≤100), `linea_contacto` (≤50), `status delivery_status`, `created_by uuid` → `profiles`, `created_at`, `updated_at`.
-- `delivery_status` enum — p. ej. `pendiente`, `confirmada`, `en_transito`, `entregada`, `devuelta`, `cancelada`.
-- `guide_status_history` — `id`, `guide_id` → `guides`, `from_status`, `to_status`, `changed_by`, `changed_at`, `note`. Lo llena un **trigger** en `guides`, no el código de la API.
+- `profiles` — PK → `auth.users(id)`, `username` único. Se crea por trigger al registrarse (`username` desde `options.data` del signUp; si falta, el email).
+- `guides` — campos del legacy con las reglas de Joi como `check` constraints; `guia` único; `status`, `created_by` (default `auth.uid()`), `created_at`, `updated_at`. `numero_cuenta` e `id_proveedor` son `text` (ceros a la izquierda).
+- `delivery_status` — `confirmada` (al crear) → `en_transito` | `cancelada`; `en_transito` → `entregada` | `devuelta`. Los demás son finales. Transición inválida → error `23514`.
+- `guide_status_history` — una fila por creación y por cambio de estado, escrita **solo** por trigger (`changed_by = auth.uid()`).
 
-Reglas: unicidad y rangos como **constraints de la DB** (no consultas previas como hacía Firestore). `numero_cuenta` e `id_proveedor` son `text` para no perder ceros a la izquierda. RLS activado en todas las tablas.
+Seguridad: RLS en todas las tablas + privilegios por columna. `authenticated` puede leer todo, insertar guías (sin `status`/`created_by`) y actualizar **solo** `status`; `anon` no accede a nada. Así la DB se protege aunque se llame a PostgREST directamente con la anon key pública.
+
+Implicación para la API: debe llamar a Supabase **con el token del usuario** (cliente con anon key + header `Authorization`), no con la service-role key; si no, `auth.uid()` es null y se pierden RLS, `created_by` y `changed_by`.
+
+Seed local: usuario `demo@confirm-deliveries.dev` / `demo1234` con 5 guías en distintos estados.
 
 ## API objetivo
 
@@ -75,10 +79,15 @@ node src/server.js   # Express local en :3000
 ```
 Requiere `.env` con `JWT_SECRET_KEY` y ADC de GCP. **No hay tests todavía.**
 
+Supabase local (requiere Docker; el CLI se usa vía `npx supabase` si no está instalado):
+```bash
+npx supabase start        # Postgres + Auth + Studio locales
+npx supabase db reset     # aplica migrations + seed
+npx supabase migration new <nombre>
+```
+
 Objetivo (actualizar esta sección al crearlos):
 ```bash
-supabase start            # Postgres + Auth locales (Docker)
-supabase db reset         # aplica migrations + seed
 npm --prefix api run dev | test | lint
 npm --prefix web run dev | test | lint | build
 ```

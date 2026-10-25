@@ -130,7 +130,5 @@ dist
 .pnp.*
 
 key.json
-# AI / Supabase local
+# Claude Code (permisos locales)
 .claude/settings.local.json
-supabase/.temp
-supabase/.branches
