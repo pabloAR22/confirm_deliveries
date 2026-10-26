@@ -96,8 +96,10 @@ npm --prefix web run dev | test | lint | build
 
 Nunca commitear `.env`. Mantener `.env.example` en `api/` y `web/`.
 
-- api: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (o la que corresponda para verificar JWT), `PORT`. La service-role key solo en el backend y solo si es imprescindible.
-- web: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`. Nada secreto con prefijo `VITE_`.
+Supabase usa claves nuevas: **publishable** (`sb_publishable_…`, pública, sustituye a la anon) y **secret** (`sb_secret_…`, sustituye a la service-role). Los access tokens van firmados con ES256: verificarlos con `supabase.auth.getClaims()` (usa JWKS), no con un JWT secret compartido. En local, `npx supabase status` muestra los valores.
+
+- api: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PORT`. La secret key solo si es imprescindible y nunca fuera del backend.
+- web: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_URL`. Nada secreto con prefijo `VITE_`.
 
 ## Convenciones
 
