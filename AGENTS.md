@@ -14,7 +14,7 @@ Origen: API Express sobre GCP Cloud Functions + Firestore con JWT propio, elimin
 |---|---|---|
 | 1 | Esquema Supabase: tablas, constraints, triggers, RLS, seed | ✅ |
 | 2 | API Express (`api/`) con Supabase Auth, tests de integración; borrado del legacy | ✅ |
-| 3 | Frontend React + TS + Vite (`web/`): login y vista de entregas con historial | pendiente |
+| 3 | Frontend React + TS + Vite (`web/`): login, lista, etiqueta con recorrido, cambio de estado, alta de guías | ✅ |
 | 4 | CI/CD en GitHub Actions: lint, tests, imagen Docker de la API en GHCR, frontend en Vercel | pendiente |
 | 5 | Demo en vivo y README | pendiente |
 
@@ -35,7 +35,15 @@ api/            Node + Express 5 (ESM, JavaScript)
     routes.js       endpoints /api/v1
     openapi.js      especificación OpenAPI (servida en /api/v1/docs)
   test/           integración contra Supabase local (Vitest + Supertest)
-web/            React + TS + Vite (fase 3; deploy en Vercel, root dir = web)
+web/            React 19 + TS + Vite (deploy en Vercel, root dir = web)
+  src/
+    App.tsx           sesión de Supabase → Login o Deliveries
+    Login.tsx         login + acceso con cuenta demo + etiqueta de ejemplo
+    Deliveries.tsx    lista con filtros por estado + panel de detalle
+    GuideLabel.tsx    la guía como etiqueta de envío: datos, acciones y recorrido
+    NewGuideDialog.tsx  alta de una guía (<dialog> nativo)
+    lib/api.ts        cliente Supabase, tipos y llamadas a la API
+    lib/status.ts     etiquetas, transiciones (espejo de la DB) y formatos
 supabase/       config, migrations/ (única fuente del esquema), seed.sql
 docs/           documentación del sistema legacy
 ```
@@ -84,9 +92,14 @@ npm --prefix api install
 npm --prefix api run dev       # http://localhost:3000, recarga con --watch
 npm --prefix api test          # requiere Supabase local levantado
 npm --prefix api run lint      # ESLint + Prettier --check
-```
 
-Fase 3 (actualizar al crearlo): `npm --prefix web run dev | test | lint | build`.
+cp web/.env.example web/.env
+npm --prefix web install
+npm --prefix web run dev       # http://localhost:5173 (necesita la API en :3000)
+npm --prefix web test          # Vitest (lógica pura de lib/)
+npm --prefix web run lint      # oxlint + Prettier --check
+npm --prefix web run build     # tsc + vite build
+```
 
 ## Variables de entorno
 
@@ -106,6 +119,7 @@ Supabase usa claves nuevas: **publishable** (`sb_publishable_…`, pública, sus
 - Tests: Vitest; en la API, integración real contra Supabase local (sin mocks de la DB). Cada endpoint con al menos un caso de éxito y uno de error.
 - Lint: ESLint flat config (`@eslint/js` recommended) + Prettier (`singleQuote`, `printWidth: 100`).
 - Node 24+.
+- Frontend: sin router ni librerías de estado/datos/UI; `fetch` + estado de React, CSS plano con tokens en `index.css` (modo oscuro por `prefers-color-scheme`). Para trabajo visual, usar la skill `frontend-design`. Dirección visual: la guía como etiqueta de envío (Barlow Condensed para números y títulos, Barlow para texto, borde cartón en la etiqueta activa, un color por estado).
 - Mínimo necesario: sin abstracciones especulativas ni dependencias nuevas si una existente o la plataforma lo resuelve. Los atajos deliberados se marcan con un comentario `ponytail:` que dice el límite y cómo mejorarlo.
 
 ## Límites para agentes
