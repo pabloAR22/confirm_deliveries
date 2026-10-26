@@ -4,127 +4,112 @@ Guía para agentes de IA (Claude Code, Codex, Copilot, etc.). Fuente única de v
 
 ## Qué es
 
-API para **confirmar guías de envío** (entregas): un usuario autenticado registra guías (dirección, ciudad, valor, costo de envío, proveedor…) y consulta las confirmadas. Proyecto de portafolio.
+Sistema para **confirmar guías de envío** y seguir su estado: un usuario autenticado registra guías (dirección, ciudad, valor, costo de envío, proveedor…), cambia su estado y consulta el historial. Proyecto de portafolio (repo público).
 
-Documentación detallada del estado actual (legacy): `docs/legacy-firestore-api.md`.
+Origen: API Express sobre GCP Cloud Functions + Firestore con JWT propio, eliminada en la fase 2. Documentación de ese sistema: `docs/legacy-firestore-api.md`.
 
-## Estado: migración en curso
+## Migración por fases
 
-| | Hoy (legacy, `src/`) | Objetivo |
+| Fase | Qué | Estado |
 |---|---|---|
-| Runtime | Express envuelto en GCP Cloud Function (`@google-cloud/functions-framework`) | Express standalone en contenedor Docker |
-| Datos | Firestore (`users`, `guides`) | Supabase PostgreSQL con tablas relacionales — **esquema listo (fase 1)** |
-| Auth | JWT propio + bcrypt (`/auth/register`, `/auth/login`) | Supabase Auth; la API solo verifica el token |
-| Frontend | — | React + TypeScript + Vite |
-| CI/CD | — | GitHub Actions: lint, tests, imagen Docker en GHCR, frontend en Vercel |
-| Demo en vivo | — | web → Vercel · api → Render free (imagen de GHCR) · DB/Auth → Supabase free |
-| Costo | — | Cero: Supabase CLI en local con Docker, planes gratuitos para la demo |
+| 1 | Esquema Supabase: tablas, constraints, triggers, RLS, seed | ✅ |
+| 2 | API Express (`api/`) con Supabase Auth, tests de integración; borrado del legacy | ✅ |
+| 3 | Frontend React + TS + Vite (`web/`): login y vista de entregas con historial | pendiente |
+| 4 | CI/CD en GitHub Actions: lint, tests, imagen Docker de la API en GHCR, frontend en Vercel | pendiente |
+| 5 | Demo en vivo y README | pendiente |
 
-Limitaciones aceptadas de la demo: Render free duerme la API tras inactividad (cold start ~30–50 s; el frontend debe mostrar un estado de carga claro) y Supabase free pausa proyectos inactivos ~1 semana. El README debe avisarlo.
-
-Alcance mínimo: modelo Firestore → tablas, API REST, login con Supabase Auth y vista de entregas con su historial de estados.
+Demo en vivo (costo cero): web → Vercel · api → Render free (imagen de GHCR) · DB/Auth → Supabase free. Limitaciones aceptadas: Render free duerme la API tras inactividad (cold start ~30–50 s; el frontend debe mostrar un estado de carga claro) y Supabase free pausa proyectos inactivos ~1 semana. El README debe avisarlo.
 
 Por qué PostgreSQL: pedidos, estados e historial de cambios son relacionales. (MongoDB se muestra en otro proyecto del portafolio; no proponerlo aquí.)
 
-## Estructura objetivo
+## Estructura
 
 ```
-api/            Node + Express (código migrado desde src/)
+api/            Node + Express 5 (ESM, JavaScript)
   src/
-  test/
-  Dockerfile
-web/            React + TS + Vite (deploy en Vercel, root dir = web)
-supabase/       generado por `supabase init`
-  migrations/   SQL versionado: única fuente del esquema
-  seed.sql
-.github/workflows/
+    app.js          app Express: CORS, /health, Swagger, router, errores
+    server.js       arranque (listen)
+    supabase.js     clientes: verificación de tokens y cliente por usuario
+    middlewares.js  authenticate, validate (Joi), errorHandler, HttpError
+    schemas.js      esquemas Joi
+    routes.js       endpoints /api/v1
+    openapi.js      especificación OpenAPI (servida en /api/v1/docs)
+  test/           integración contra Supabase local (Vitest + Supertest)
+web/            React + TS + Vite (fase 3; deploy en Vercel, root dir = web)
+supabase/       config, migrations/ (única fuente del esquema), seed.sql
+docs/           documentación del sistema legacy
 ```
 
-`src/`, `firebase.json`, `firestore.*`, `.firebaserc`, `.gcloudignore` y las dependencias de Firebase/GCP/bcrypt/jsonwebtoken se **eliminan** cuando su reemplazo funcione. No mantener ambos caminos en paralelo.
-
-## Modelo de datos (fase 1 ✅)
+## Modelo de datos
 
 Fuente de verdad: `supabase/migrations/`. Resumen:
 
 - `profiles` — PK → `auth.users(id)`, `username` único. Se crea por trigger al registrarse (`username` desde `options.data` del signUp; si falta, el email).
-- `guides` — campos del legacy con las reglas de Joi como `check` constraints; `guia` único; `status`, `created_by` (default `auth.uid()`), `created_at`, `updated_at`. `numero_cuenta` e `id_proveedor` son `text` (ceros a la izquierda).
+- `guides` — reglas de validación como `check` constraints; `guia` único; `status`, `created_by` (default `auth.uid()`), `created_at`, `updated_at`. `numero_cuenta` e `id_proveedor` son `text` (ceros a la izquierda).
 - `delivery_status` — `confirmada` (al crear) → `en_transito` | `cancelada`; `en_transito` → `entregada` | `devuelta`. Los demás son finales. Transición inválida → error `23514`.
 - `guide_status_history` — una fila por creación y por cambio de estado, escrita **solo** por trigger (`changed_by = auth.uid()`).
 
-Seguridad: RLS en todas las tablas + privilegios por columna. `authenticated` puede leer todo, insertar guías (sin `status`/`created_by`) y actualizar **solo** `status`; `anon` no accede a nada. Así la DB se protege aunque se llame a PostgREST directamente con la anon key pública.
+Seguridad: RLS en todas las tablas + privilegios por columna. `authenticated` puede leer todo, insertar guías (sin `status`/`created_by`) y actualizar **solo** `status`; `anon` no accede a nada. La DB se protege aunque se llame a PostgREST directamente con la publishable key.
 
-Implicación para la API: debe llamar a Supabase **con el token del usuario** (cliente con anon key + header `Authorization`), no con la service-role key; si no, `auth.uid()` es null y se pierden RLS, `created_by` y `changed_by`.
+La API llama a Supabase **con el token del usuario** (`clientFor(token)`), nunca con la secret key: si no, `auth.uid()` es null y se pierden RLS, `created_by` y `changed_by`.
 
 Seed local: usuario `demo@confirm-deliveries.dev` / `demo1234` con 5 guías en distintos estados.
 
-## API objetivo
+## API
 
-Prefijo `/api/v1`, header `Authorization: Bearer <access_token de Supabase>`.
+Prefijo `/api/v1`, header `Authorization: Bearer <access_token de Supabase>`. Swagger UI en `/api/v1/docs`; `/health` es público.
 
-- `GET /guides` — lista (filtros por estado/fecha cuando hagan falta)
-- `GET /guides/:id` — detalle + historial
-- `POST /guides` — crea una o varias (array, igual que hoy `confirmGuides`)
-- `PATCH /guides/:id/status` — cambia estado (genera historial vía trigger)
 - `GET /me` — perfil del usuario actual
+- `GET /guides?status=` — lista, más recientes primero
+- `GET /guides/:id` — detalle + `history`
+- `POST /guides` — array de 1–100 guías, un solo INSERT (todas o ninguna)
+- `PATCH /guides/:id/status` — `{ status }`; la DB valida la transición y registra el historial
 
-Se eliminan `/auth/register`, `/auth/login` (el frontend usa `supabase-js` directamente) y `GET /users` (exponía hashes de password). Validación de entrada con Joi (ya instalado; reusar los mensajes de `src/schemas/`). Swagger: una sola config, sin el `src/swagger.js` muerto.
+No hay registro ni login en la API: el frontend usa `supabase-js` directamente.
+
+Errores: `{ message, errors? }`. `errorHandler` traduce códigos de Postgres/PostgREST: `23505` → 409, `23514`/`22P02` → 400, `42501` → 403, `PGRST116` → 404. Validación Joi → 400 con todos los mensajes (en español).
 
 ## Comandos
 
-Legacy (hoy):
-```bash
-npm install
-npm run dev     # nodemon src/app.js (Function Framework)
-node src/server.js   # Express local en :3000
-```
-Requiere `.env` con `JWT_SECRET_KEY` y ADC de GCP. **No hay tests todavía.**
+Todo desde la raíz del repo. Docker debe estar corriendo; el CLI de Supabase se usa vía `npx`.
 
-Supabase local (requiere Docker; el CLI se usa vía `npx supabase` si no está instalado):
 ```bash
-npx supabase start        # Postgres + Auth + Studio locales
-npx supabase db reset     # aplica migrations + seed
+npx supabase start        # Postgres + Auth + Studio (http://127.0.0.1:54323)
+npx supabase db reset     # reaplica migrations + seed (los tests asumen el seed)
 npx supabase migration new <nombre>
+npx supabase stop
+
+cp api/.env.example api/.env   # rellenar con `npx supabase status`
+npm --prefix api install
+npm --prefix api run dev       # http://localhost:3000, recarga con --watch
+npm --prefix api test          # requiere Supabase local levantado
+npm --prefix api run lint      # ESLint + Prettier --check
 ```
 
-Objetivo (actualizar esta sección al crearlos):
-```bash
-npm --prefix api run dev | test | lint
-npm --prefix web run dev | test | lint | build
-```
+Fase 3 (actualizar al crearlo): `npm --prefix web run dev | test | lint | build`.
 
 ## Variables de entorno
 
 Nunca commitear `.env`. Mantener `.env.example` en `api/` y `web/`.
 
-Supabase usa claves nuevas: **publishable** (`sb_publishable_…`, pública, sustituye a la anon) y **secret** (`sb_secret_…`, sustituye a la service-role). Los access tokens van firmados con ES256: verificarlos con `supabase.auth.getClaims()` (usa JWKS), no con un JWT secret compartido. En local, `npx supabase status` muestra los valores.
+Supabase usa claves nuevas: **publishable** (`sb_publishable_…`, pública, sustituye a la anon) y **secret** (`sb_secret_…`, sustituye a la service-role). Los access tokens van firmados con ES256: se verifican con `supabase.auth.getClaims()` (JWKS), no con un JWT secret compartido.
 
-- api: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PORT`. La secret key solo si es imprescindible y nunca fuera del backend.
+- api: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PORT`, `CORS_ORIGIN` (origen del frontend en producción; por defecto `*`).
 - web: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_URL`. Nada secreto con prefijo `VITE_`.
 
 ## Convenciones
 
-- Idioma: código y nombres técnicos en inglés; campos de dominio existentes en español (`guia`, `ciudad_destino`…) se conservan para no romper el contrato. Docs y commits en español.
-- Capas de la API: `routes → middlewares → controllers → services`. Los services hablan con Supabase; los controllers no.
-- Errores: un middleware de errores central; mapear códigos de Postgres (`23505` unique → 409, `23514` check → 400) en vez de comparar strings de mensaje como hace el legacy.
-- Cambios de esquema **solo** mediante nueva migración en `supabase/migrations/` (`supabase migration new <nombre>`). Nunca editar una migración ya aplicada.
-- Tests: Vitest (+ Supertest en api). Cada endpoint nuevo con al menos un test de éxito y uno de error.
-- Lint: ESLint 9 flat config + Prettier (ya en devDependencies).
-- Node 20+ (el `engines: 18.x` actual se actualiza en la migración).
-- Mínimo necesario: sin abstracciones especulativas ni dependencias nuevas si una existente o la plataforma lo resuelve.
-
-## Deuda conocida del legacy (no replicar)
-
-- Login y registro comparten el mismo middleware de validación montado en todo `/auth`.
-- `GET /users` devuelve el hash de password.
-- `authMiddleware` lee el header sin quitar `Bearer `.
-- `for (guideData of guides)` sin `const` → global implícita.
-- Errores detectados comparando `error.message` con strings.
-- Swagger duplicado (`src/swagger.js` sin usar) y `POST /auth/register` documentado dos veces; `console.log` de debug en `swaggerRoutes.js`.
-- Unicidad de `username`/`guia` con consulta previa → condición de carrera.
+- Idioma: código y nombres técnicos en inglés; campos de dominio en español (`guia`, `ciudad_destino`…) por continuidad con el contrato original. Mensajes al usuario, docs y commits en español.
+- API sin capa de services: los handlers usan el query builder de Supabase directamente y las reglas de negocio viven en la DB (constraints, triggers, RLS). Joi duplica las reglas solo para dar mensajes claros.
+- Express 5: los errores async llegan solos al `errorHandler`; no envolver handlers en try/catch. Lanzar `HttpError(status, message)` o el `error` de Supabase.
+- Cambios de esquema **solo** con una migración nueva. Nunca editar una migración ya aplicada.
+- Tests: Vitest; en la API, integración real contra Supabase local (sin mocks de la DB). Cada endpoint con al menos un caso de éxito y uno de error.
+- Lint: ESLint flat config (`@eslint/js` recommended) + Prettier (`singleQuote`, `printWidth: 100`).
+- Node 24+.
+- Mínimo necesario: sin abstracciones especulativas ni dependencias nuevas si una existente o la plataforma lo resuelve. Los atajos deliberados se marcan con un comentario `ponytail:` que dice el límite y cómo mejorarlo.
 
 ## Límites para agentes
 
 - No hacer push, deploy, ni crear recursos en Supabase cloud / Vercel / Render / GHCR sin confirmación.
 - Git: nunca añadir a la IA como autor o coautor (sin trailers `Co-Authored-By` ni firmas "Generated with…").
-- No borrar código legacy hasta que exista y funcione su reemplazo.
-- Commits pequeños por fase; rama por fase, PR a `main`.
+- Rama por fase, commits pequeños, PR a `main`.
