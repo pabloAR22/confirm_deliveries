@@ -64,7 +64,9 @@ jobs:
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - run: |
           IMAGE="${IMAGE,,}"
-          docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" api
+          # Sin atestación se publica un manifiesto simple: GHCR lee de él la etiqueta
+          # org.opencontainers.image.source que enlaza el paquete al repo (sin ella, «denied»).
+          docker build --provenance=false -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" api
           docker push --all-tags "$IMAGE"
       # Render no detecta imágenes nuevas: su deploy hook despliega exactamente esta versión.
       - if: env.RENDER_DEPLOY_HOOK_URL != ''
