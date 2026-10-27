@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { GuideLabel } from './GuideLabel';
-import { api, supabase, type Guide, type GuideDetail } from './lib/api';
+import { api, auth, type Guide, type GuideDetail } from './lib/api';
 import {
   countByStatus,
   formatDateTime,
@@ -80,7 +80,7 @@ export function Deliveries({ email }: { email: string }) {
       <header className="topbar">
         <p className="brand">Confirm Deliveries</p>
         <span className="topbar-user">{email}</span>
-        <button className="btn btn-quiet" onClick={() => supabase.auth.signOut()}>
+        <button className="btn btn-quiet" onClick={() => auth.signOut()}>
           Cerrar sesión
         </button>
       </header>

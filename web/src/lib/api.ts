@@ -1,10 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { AuthClient } from '@supabase/auth-js';
 import type { Status } from './status';
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-);
+// Solo Supabase Auth: los datos van por la API. auth-js en vez de supabase-js ahorra
+// postgrest, realtime y storage en el bundle.
+export const auth = new AuthClient({
+  url: `${import.meta.env.VITE_SUPABASE_URL}/auth/v1`,
+  headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+  storageKey: 'confirm-deliveries-auth',
+});
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -48,7 +51,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await auth.getSession();
   let res: Response;
   try {
     res = await fetch(`${API_URL}/api/v1${path}`, {

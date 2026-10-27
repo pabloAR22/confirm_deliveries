@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { GuideLabel } from './GuideLabel';
-import { supabase, type GuideDetail } from './lib/api';
+import { auth, type GuideDetail } from './lib/api';
 
 const DEMO = { email: 'demo@confirm-deliveries.dev', password: 'demo1234' };
 
@@ -52,7 +52,7 @@ export function Login() {
   async function signIn(credentials: { email: string; password: string }) {
     setBusy(true);
     setError('');
-    const { error } = await supabase.auth.signInWithPassword(credentials);
+    const { error } = await auth.signInWithPassword(credentials);
     if (error) {
       setError(
         error.message === 'Invalid login credentials'
