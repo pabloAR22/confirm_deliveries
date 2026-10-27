@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { GuideLabel } from './GuideLabel';
-import { api, supabase, type Guide, type GuideDetail } from './lib/api';
+import { api, auth, type Guide, type GuideDetail } from './lib/api';
 import {
   countByStatus,
   formatDateTime,
@@ -72,6 +72,8 @@ export function Deliveries({ email }: { email: string }) {
     }
   }
 
+  // Límite conocido: se cargan todas las guías y se filtran en el cliente; con cientos de guías,
+  // pasar el filtro a GET /guides?status= y paginar (la API ya acepta status).
   const counts = countByStatus(guides ?? []);
   const visible = (guides ?? []).filter((g) => !filter || g.status === filter);
 
@@ -80,7 +82,7 @@ export function Deliveries({ email }: { email: string }) {
       <header className="topbar">
         <p className="brand">Confirm Deliveries</p>
         <span className="topbar-user">{email}</span>
-        <button className="btn btn-quiet" onClick={() => supabase.auth.signOut()}>
+        <button className="btn btn-quiet" onClick={() => auth.signOut()}>
           Cerrar sesión
         </button>
       </header>
@@ -143,9 +145,8 @@ export function Deliveries({ email }: { email: string }) {
                 {visible.map((g) => (
                   <tr key={g.id} aria-selected={g.id === selectedId} onClick={() => select(g.id)}>
                     <td>
-                      <button className="guide-link" onClick={() => select(g.id)}>
-                        {g.guia}
-                      </button>
+                      {/* el click (o Enter) del botón burbujea al onClick de la fila */}
+                      <button className="guide-link">{g.guia}</button>
                     </td>
                     <td>
                       {g.ciudad_destino}
@@ -174,7 +175,7 @@ export function Deliveries({ email }: { email: string }) {
               {actionError}
             </p>
           )}
-          {detail ? (
+          {detail && detail.id === selectedId ? (
             <GuideLabel guide={detail} onChangeStatus={changeStatus} busy={busy} />
           ) : (
             !selectedId && (

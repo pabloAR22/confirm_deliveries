@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { GuideLabel } from './GuideLabel';
-import { supabase, type GuideDetail } from './lib/api';
+import { auth, type GuideDetail } from './lib/api';
 
+// Límite conocido: sin registro en la UI, solo la cuenta demo (evita basura en la demo pública).
+// Para abrirlo: auth.signUp({ email, password, options: { data: { username } } }).
 const DEMO = { email: 'demo@confirm-deliveries.dev', password: 'demo1234' };
 
 // Etiqueta de ejemplo para mostrar el producto antes de entrar.
@@ -52,7 +54,7 @@ export function Login() {
   async function signIn(credentials: { email: string; password: string }) {
     setBusy(true);
     setError('');
-    const { error } = await supabase.auth.signInWithPassword(credentials);
+    const { error } = await auth.signInWithPassword(credentials);
     if (error) {
       setError(
         error.message === 'Invalid login credentials'

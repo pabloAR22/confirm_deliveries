@@ -18,7 +18,7 @@ router.get('/me', async (req, res) => {
 });
 
 router.get('/guides', validate(listQuery, 'query'), async (req, res) => {
-  // ponytail: sin paginación; añadir range() cuando haya más de unos cientos de guías
+  // Límite conocido: sin paginación; añadir range() cuando haya más de unos cientos de guías
   let query = req.db.from('guides').select().order('created_at', { ascending: false });
   if (req.query.status) query = query.eq('status', req.query.status);
   const { data, error } = await query;

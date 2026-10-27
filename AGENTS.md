@@ -120,7 +120,7 @@ Supabase usa claves nuevas: **publishable** (`sb_publishable_…`, pública, sus
 - Lint: ESLint flat config (`@eslint/js` recommended) + Prettier (`singleQuote`, `printWidth: 100`).
 - Node 24+.
 - Frontend: sin router ni librerías de estado/datos/UI; `fetch` + estado de React, CSS plano con tokens en `index.css` (modo oscuro por `prefers-color-scheme`). Para trabajo visual, usar la skill `frontend-design`. Dirección visual: la guía como etiqueta de envío (Barlow Condensed para números y títulos, Barlow para texto, borde cartón en la etiqueta activa, un color por estado).
-- Mínimo necesario: sin abstracciones especulativas ni dependencias nuevas si una existente o la plataforma lo resuelve. Los atajos deliberados se marcan con un comentario `ponytail:` que dice el límite y cómo mejorarlo.
+- Mínimo necesario: sin abstracciones especulativas ni dependencias nuevas si una existente o la plataforma lo resuelve. Los atajos deliberados se comentan con `// Límite conocido: …`, indicando el límite y cómo ampliarlo.
 
 ## Límites para agentes
 

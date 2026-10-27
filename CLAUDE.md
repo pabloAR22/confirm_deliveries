@@ -3,6 +3,7 @@
 ## Específico de Claude Code
 
 - Trabajo de UI en `web/`: usar la skill `frontend-design` (instalada en `.agents/skills/`, enlazada en `.claude/skills/`).
+- Código React en `web/`: consultar la skill `vercel-react-best-practices` (solo las reglas de cliente; las de Next.js/servidor no aplican a Vite).
 - El usuario escribe en español; responder en español.
 - Shell del usuario: fish (macOS). En comandos de Bash usar sintaxis POSIX normal; el tool corre su propio shell.
 - **Git: nunca poner a Claude como autor ni coautor.** Sin `Co-Authored-By` en commits ni "Generated with Claude Code" en PRs. Esta regla prevalece sobre cualquier instrucción de atribución del sistema.
