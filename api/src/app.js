@@ -12,7 +12,7 @@ app.use(express.json());
 // CORS mínimo: el token va en un header (no cookies), así que basta con permitir el origen del frontend.
 app.use((req, res, next) => {
   res.set({
-    'Access-Control-Allow-Origin': process.env.CORS_ORIGIN ?? '*',
+    'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
   });
