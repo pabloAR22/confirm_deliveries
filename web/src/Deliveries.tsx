@@ -72,7 +72,7 @@ export function Deliveries({ email }: { email: string }) {
     }
   }
 
-  // ponytail: se cargan todas las guías y se filtran en el cliente; con cientos de guías,
+  // Límite conocido: se cargan todas las guías y se filtran en el cliente; con cientos de guías,
   // pasar el filtro a GET /guides?status= y paginar (la API ya acepta status).
   const counts = countByStatus(guides ?? []);
   const visible = (guides ?? []).filter((g) => !filter || g.status === filter);

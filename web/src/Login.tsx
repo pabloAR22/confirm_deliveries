@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { GuideLabel } from './GuideLabel';
 import { auth, type GuideDetail } from './lib/api';
 
-// ponytail: sin registro en la UI, solo la cuenta demo (evita basura en la demo pública).
+// Límite conocido: sin registro en la UI, solo la cuenta demo (evita basura en la demo pública).
 // Para abrirlo: auth.signUp({ email, password, options: { data: { username } } }).
 const DEMO = { email: 'demo@confirm-deliveries.dev', password: 'demo1234' };
 

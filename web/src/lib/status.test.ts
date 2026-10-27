@@ -1,4 +1,4 @@
-// ponytail: solo se prueba la lógica pura; las pantallas se verificaron a mano en el navegador.
+// Límite conocido: solo se prueba la lógica pura; las pantallas se verificaron a mano en el navegador.
 // Si crecen, añadir @testing-library/react para login, cambio de estado y alta de guías.
 import { describe, expect, it } from 'vitest';
 import { countByStatus, formatMoney, NEXT_STATUSES, STATUSES } from './status';
