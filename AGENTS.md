@@ -15,7 +15,7 @@ Origen: API Express sobre GCP Cloud Functions + Firestore con JWT propio, elimin
 | 1 | Esquema Supabase: tablas, constraints, triggers, RLS, seed | ✅ |
 | 2 | API Express (`api/`) con Supabase Auth, tests de integración; borrado del legacy | ✅ |
 | 3 | Frontend React + TS + Vite (`web/`): login, lista, etiqueta con recorrido, cambio de estado, alta de guías | ✅ |
-| 4 | CI/CD en GitHub Actions: lint, tests, imagen Docker de la API en GHCR, frontend en Vercel | pendiente |
+| 4 | CI/CD en GitHub Actions: lint, tests, imagen Docker de la API en GHCR, frontend en Vercel | ✅ (Vercel se activa al configurarlo en la fase 5) |
 | 5 | Demo en vivo y README | pendiente |
 
 Demo en vivo (costo cero): web → Vercel · api → Render free (imagen de GHCR) · DB/Auth → Supabase free. Limitaciones aceptadas: Render free duerme la API tras inactividad (cold start ~30–50 s; el frontend debe mostrar un estado de carga claro) y Supabase free pausa proyectos inactivos ~1 semana. El README debe avisarlo.
@@ -35,6 +35,7 @@ api/            Node + Express 5 (ESM, JavaScript)
     routes.js       endpoints /api/v1
     openapi.js      especificación OpenAPI (servida en /api/v1/docs)
   test/           integración contra Supabase local (Vitest + Supertest)
+  Dockerfile      imagen de producción (node:24-alpine, usuario no root)
 web/            React 19 + TS + Vite (deploy en Vercel, root dir = web)
   src/
     App.tsx           sesión de Supabase → Login o Deliveries
@@ -44,6 +45,7 @@ web/            React 19 + TS + Vite (deploy en Vercel, root dir = web)
     NewGuideDialog.tsx  alta de una guía (<dialog> nativo)
     lib/api.ts        cliente Supabase, tipos y llamadas a la API
     lib/status.ts     etiquetas, transiciones (espejo de la DB) y formatos
+.github/workflows/ci.yml   CI/CD (ver abajo)
 supabase/       config, migrations/ (única fuente del esquema), seed.sql
 docs/           documentación del sistema legacy
 ```
@@ -99,7 +101,20 @@ npm --prefix web run dev       # http://localhost:5173 (necesita la API en :3000
 npm --prefix web test          # Vitest (lógica pura de lib/)
 npm --prefix web run lint      # oxlint + Prettier --check
 npm --prefix web run build     # tsc + vite build
+
+docker build -t confirm-deliveries-api api   # imagen de la API
 ```
+
+## CI/CD
+
+`.github/workflows/ci.yml`, en cada PR y push a `main`:
+
+- `api` — levanta Supabase local en el runner (solo db, auth, postgrest y kong), toma `SUPABASE_URL` y la publishable key de `supabase status` y corre lint + tests de integración.
+- `web` — lint, tests y build.
+- `image` (solo `main`, tras `api`) — publica `ghcr.io/pabloar22/confirm_deliveries-api` con tags `latest` y SHA corto, usando `GITHUB_TOKEN`.
+- `deploy-web` (solo `main`, tras `api` y `web`) — `vercel pull/build/deploy --prebuilt --prod`. Se salta mientras no exista la variable de repo `VERCEL_PROJECT_ID`. Requiere variables `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` y secreto `VERCEL_TOKEN`; las `VITE_*` se configuran en el proyecto de Vercel (Root Directory = `web`), no en GitHub.
+
+Versiones fijadas: Supabase CLI y Vercel CLI en el workflow; al actualizarlas localmente, actualizarlas también ahí.
 
 ## Variables de entorno
 

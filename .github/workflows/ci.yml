@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.0
+      # Solo DB, Auth, PostgREST y Kong: lo que usan los tests. start aplica migraciones y seed.
+      - run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - run: >
+          supabase status -o env | tr -d '"' |
+          sed -n 's/^API_URL=/SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/SUPABASE_PUBLISHABLE_KEY=/p'
+          >> "$GITHUB_ENV"
+      - run: npm ci
+        working-directory: api
+      - run: npm run lint
+        working-directory: api
+      - run: npm test
+        working-directory: api
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  # Imagen de la API en GHCR: solo en main y con los tests en verde.
+  image:
+    needs: [api]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}-api"
+          docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" api
+          docker push --all-tags "$IMAGE"
+
+  # Frontend en Vercel: solo en main, con los tests en verde y el proyecto configurado
+  # (variables VERCEL_ORG_ID y VERCEL_PROJECT_ID, secreto VERCEL_TOKEN).
+  deploy-web:
+    needs: [web, api]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.VERCEL_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npx vercel@65.3.1 pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+      - run: npx vercel@65.3.1 build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - run: npx vercel@65.3.1 deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
