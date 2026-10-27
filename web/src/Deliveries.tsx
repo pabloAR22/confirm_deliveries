@@ -143,9 +143,8 @@ export function Deliveries({ email }: { email: string }) {
                 {visible.map((g) => (
                   <tr key={g.id} aria-selected={g.id === selectedId} onClick={() => select(g.id)}>
                     <td>
-                      <button className="guide-link" onClick={() => select(g.id)}>
-                        {g.guia}
-                      </button>
+                      {/* el click (o Enter) del botón burbujea al onClick de la fila */}
+                      <button className="guide-link">{g.guia}</button>
                     </td>
                     <td>
                       {g.ciudad_destino}
@@ -174,7 +173,7 @@ export function Deliveries({ email }: { email: string }) {
               {actionError}
             </p>
           )}
-          {detail ? (
+          {detail && detail.id === selectedId ? (
             <GuideLabel guide={detail} onChangeStatus={changeStatus} busy={busy} />
           ) : (
             !selectedId && (
