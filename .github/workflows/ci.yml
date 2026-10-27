@@ -56,13 +56,19 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}-api
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
     steps:
       - uses: actions/checkout@v7
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - run: |
-          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}-api"
+          IMAGE="${IMAGE,,}"
           docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" api
           docker push --all-tags "$IMAGE"
+      # Render no detecta imágenes nuevas: su deploy hook despliega exactamente esta versión.
+      - if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: curl -fsS -X POST -G --data-urlencode "imgURL=${IMAGE,,}:${GITHUB_SHA::7}" "$RENDER_DEPLOY_HOOK_URL"
 
   # Frontend en Vercel: solo en main, con los tests en verde y el proyecto configurado
   # (variables VERCEL_ORG_ID y VERCEL_PROJECT_ID, secreto VERCEL_TOKEN).
