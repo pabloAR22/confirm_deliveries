@@ -16,7 +16,7 @@ Origen: API Express sobre GCP Cloud Functions + Firestore con JWT propio, elimin
 | 2 | API Express (`api/`) con Supabase Auth, tests de integración; borrado del legacy | ✅ |
 | 3 | Frontend React + TS + Vite (`web/`): login, lista, etiqueta con recorrido, cambio de estado, alta de guías | ✅ |
 | 4 | CI/CD en GitHub Actions: lint, tests, imagen Docker de la API en GHCR, frontend en Vercel | ✅ (Vercel se activa al configurarlo en la fase 5) |
-| 5 | Demo en vivo y README | pendiente |
+| 5 | Demo en vivo y README | ✅ |
 
 Demo en vivo (costo cero): web → Vercel · api → Render free (imagen de GHCR) · DB/Auth → Supabase free. Limitaciones aceptadas: Render free duerme la API tras inactividad (cold start ~30–50 s; el frontend debe mostrar un estado de carga claro) y Supabase free pausa proyectos inactivos ~1 semana. El README debe avisarlo.
 
@@ -115,6 +115,13 @@ docker build -t confirm-deliveries-api api   # imagen de la API
 - `deploy-web` (solo `main`, tras `api` y `web`) — `vercel pull/build/deploy --prebuilt --prod`. Se salta mientras no exista la variable de repo `VERCEL_PROJECT_ID`. Requiere variables `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` y secreto `VERCEL_TOKEN`; las `VITE_*` se configuran en el proyecto de Vercel (Root Directory = `web`), no en GitHub.
 
 Versiones fijadas: Supabase CLI y Vercel CLI en el workflow; al actualizarlas localmente, actualizarlas también ahí.
+
+## Demo en vivo
+
+- web: https://confirm-deliveries.vercel.app — proyecto Vercel `confirm-deliveries` (Root Directory `web`, sin integración Git: despliega el CI). Las `VITE_*` están en Vercel como tipo Config, Production.
+- api: https://confirm-deliveries-api.onrender.com — Render free, imagen `ghcr.io/pabloar22/confirm_deliveries-api` (paquete público), health check `/health`. Variables en Render: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `CORS_ORIGIN`.
+- DB/Auth: Supabase cloud, ref `etfbsyfpdvjrtaarpmxr` (São Paulo), registro de usuarios desactivado. Migraciones nuevas: `npx supabase db push --linked` (lo ejecuta el usuario; los agentes no escriben en producción).
+- GitHub Actions: secretos `RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`; variables `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
 ## Variables de entorno
 
