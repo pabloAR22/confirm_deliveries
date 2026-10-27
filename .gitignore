@@ -132,3 +132,5 @@ dist
 key.json
 # Claude Code (permisos locales)
 .claude/settings.local.json
+# Vercel CLI (vínculo local al proyecto)
+.vercel
